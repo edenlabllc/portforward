@@ -168,14 +168,23 @@ async function upgrade() {
     : `https://github.com/${REPO}/releases/download/${version}/${asset}`;
 
   console.log(`portforward: downloading ${asset} (${version})...`);
-  const response = await fetch(url, { redirect: "follow" });
+
+  let response: Response;
+  try {
+    response = await fetch(url, { redirect: "follow" });
+  } catch (error) {
+    fail(`download failed: ${error instanceof Error ? error.message : String(error)} (${url})`);
+  }
   if (!response.ok) fail(`download failed (${response.status}): ${url}`);
 
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.length === 0) fail(`download was empty: ${url}`);
+
   const tmp = join(dirname(target), `.portforward.upgrade.${process.pid}`);
-  await Bun.write(tmp, response);
+  await Bun.write(tmp, bytes);
   chmodSync(tmp, 0o755);
   renameSync(tmp, target);
-  console.log(`portforward: updated ${target}`);
+  console.log(`portforward: updated ${target} (${(bytes.length / 1e6).toFixed(1)} MB)`);
 }
 
 async function initConfig(target: string, force: boolean) {
