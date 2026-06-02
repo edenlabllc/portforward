@@ -32,6 +32,7 @@ git clone https://github.com/edenlabllc/portforward port-forward
 cd port-forward
 ./install.sh              # compiles dist/portforward and installs it
 # or just: bun run build  # produces dist/portforward
+bun test                  # run the unit tests
 ```
 
 > No `bun install` is required — the project has no runtime dependencies.
@@ -62,6 +63,16 @@ portforward start
 - `.portforward.yaml`
 - `.portforward.yml`
 - `.workspace.yaml`
+
+### Selecting services
+
+By default `start` runs every service in the config. Use `--svc` (repeatable) to run only some. The term is matched as a case-insensitive substring of the service name, so `postgres` matches `postgres-cluster-pooler` and `clickhouse` matches both `clickhouse-http` and `clickhouse-native`:
+
+```bash
+portforward start --svc minio --svc postgres
+```
+
+An unknown term fails fast and lists the available services.
 
 ## Config
 

@@ -9,7 +9,7 @@ const VERSION = typeof PORTFORWARD_VERSION !== "undefined" ? PORTFORWARD_VERSION
 const REPO = process.env.PORTFORWARD_REPO
   ?? (typeof PORTFORWARD_REPO !== "undefined" ? PORTFORWARD_REPO : "edenlabllc/portforward");
 
-type ServiceConfig = {
+export type ServiceConfig = {
   name: string;
   namespace: string;
   pod?: string;
@@ -19,7 +19,7 @@ type ServiceConfig = {
   remotePort: number;
 };
 
-type AppConfig = {
+export type AppConfig = {
   name?: string;
   services: ServiceConfig[];
 };
@@ -48,13 +48,15 @@ async function main() {
     const config = await loadConfig(configPath);
     if (config.services.length === 0) fail(`No services configured in ${configPath}`);
 
+    const selected = selectServices(config.services, getOptions(args, "--svc"));
+
     console.log(`portforward: ${config.name ?? configPath}`);
     console.log(`config: ${configPath}`);
-    console.log(`services: ${config.services.map((service) => service.name).join(", ")}`);
+    console.log(`services: ${selected.map((service) => service.name).join(", ")}`);
     console.log("Press Ctrl+C to stop.");
 
     installSignalHandlers();
-    await Promise.all(config.services.map((service) => keepAlive(service)));
+    await Promise.all(selected.map((service) => keepAlive(service)));
     return;
   }
 
@@ -97,13 +99,40 @@ function printHelp() {
 Usage:
   portforward init [--config portforward.yaml] [--force]
   portforward check [--config portforward.yaml]
-  portforward start [--config portforward.yaml]
+  portforward start [--config portforward.yaml] [--svc NAME]...
   portforward upgrade            download and install the latest release
   portforward version
+
+  --svc NAME   run only matching services (substring match, repeatable);
+               omit to start all. e.g. --svc minio --svc postgres
 
 Config files are searched in this order:
   ${CONFIG_FILES.join("\n  ")}
 `);
+}
+
+function getOptions(args: string[], name: string) {
+  const values: string[] = [];
+  for (let index = 0; index < args.length; index++) {
+    if (args[index] === name && args[index + 1] !== undefined) values.push(args[index + 1]!);
+  }
+  return values;
+}
+
+export function selectServices(services: ServiceConfig[], terms: string[]) {
+  if (terms.length === 0) return services;
+
+  const needles = terms.map((term) => term.toLowerCase());
+  const matches = (service: ServiceConfig) =>
+    needles.some((needle) => service.name.toLowerCase().includes(needle));
+  const unmatched = needles.filter((needle) =>
+    !services.some((service) => service.name.toLowerCase().includes(needle)));
+
+  if (unmatched.length) {
+    fail(`no service matches: ${unmatched.join(", ")}. available: ${services.map((service) => service.name).join(", ")}`);
+  }
+
+  return services.filter(matches);
 }
 
 function getOption(args: string[], name: string) {
@@ -179,13 +208,13 @@ async function loadConfig(path: string): Promise<AppConfig> {
   return parsed;
 }
 
-function finalizeConfig(config: AppConfig) {
+export function finalizeConfig(config: AppConfig) {
   for (const service of config.services) {
     service.pod ??= service.name;
   }
 }
 
-function parseConfig(text: string): AppConfig {
+export function parseConfig(text: string): AppConfig {
   const trimmed = text.trimStart();
   if (trimmed.startsWith("{")) return parseJsonConfig(trimmed);
   return parseYamlConfig(text);
@@ -337,7 +366,7 @@ function stripInlineComment(line: string) {
   return line.trimEnd();
 }
 
-function validateConfig(config: AppConfig, path: string) {
+export function validateConfig(config: AppConfig, path: string) {
   for (const service of config.services) {
     if (!service.name) fail(`Invalid config ${path}: service without name.`);
     if (!service.namespace) fail(`Invalid config ${path}: ${service.name}.namespace is required.`);
@@ -522,12 +551,12 @@ async function streamLines(stream: ReadableStream | null, onLine: (line: string)
   }
 }
 
-function isBenignForwardError(line: string) {
+export function isBenignForwardError(line: string) {
   return line.includes("error copying from local connection to remote stream")
     || line.includes("error copying from remote stream to local connection");
 }
 
-function nextReconnectDelay(current: number) {
+export function nextReconnectDelay(current: number) {
   return Math.min(current * 2, 30000);
 }
 
@@ -554,8 +583,12 @@ function sleep(ms: number) {
 }
 
 function fail(message: string): never {
-  console.error(`portforward: ${message}`);
-  process.exit(1);
+  throw new Error(message);
 }
 
-main().catch((error) => fail(error instanceof Error ? error.message : String(error)));
+if (import.meta.main) {
+  main().catch((error) => {
+    console.error(`portforward: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  });
+}

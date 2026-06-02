@@ -8,7 +8,15 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun test
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:

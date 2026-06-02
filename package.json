@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "bun build --compile src/cli.ts --outfile dist/portforward",
+    "test": "bun test",
     "start": "bun src/cli.ts start",
     "init": "bun src/cli.ts init",
     "check": "bun src/cli.ts check"
