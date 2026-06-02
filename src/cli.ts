@@ -385,14 +385,15 @@ async function keepAlive(service: ServiceConfig) {
       log(service, `kubectl ${args.join(" ")}`);
 
       const child = Bun.spawn(["kubectl", ...args], {
-        stdout: "pipe",
+        stdout: "ignore",
         stderr: "pipe",
       });
 
       running.add(child);
       void child.exited.then(() => running.delete(child));
-      streamLines(child.stdout, (line) => log(service, line));
-      streamLines(child.stderr, (line) => log(service, `[err] ${line}`));
+      streamLines(child.stderr, (line) => {
+        if (!isBenignForwardError(line)) log(service, `[err] ${line}`);
+      });
 
       if (await waitForPortActive(service.localPort)) {
         log(service, `localhost:${service.localPort} -> ${target}:${service.remotePort}`);
@@ -519,6 +520,11 @@ async function streamLines(stream: ReadableStream | null, onLine: (line: string)
     if (rest) onLine(rest);
   } catch {
   }
+}
+
+function isBenignForwardError(line: string) {
+  return line.includes("error copying from local connection to remote stream")
+    || line.includes("error copying from remote stream to local connection");
 }
 
 function nextReconnectDelay(current: number) {
