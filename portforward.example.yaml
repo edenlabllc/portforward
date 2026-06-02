@@ -1,0 +1,13 @@
+name: local-dev
+
+services:
+  api:
+    namespace: default
+    pod: api
+    localPort: 8080
+    remotePort: 8080
+  postgres:
+    namespace: default
+    pod: postgres
+    localPort: 5432
+    remotePort: 5432

@@ -1,0 +1,36 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: bun-darwin-arm64
+            asset: portforward-darwin-arm64
+          - target: bun-darwin-x64
+            asset: portforward-darwin-x64
+          - target: bun-linux-x64
+            asset: portforward-linux-x64
+          - target: bun-linux-arm64
+            asset: portforward-linux-arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Build ${{ matrix.asset }}
+        run: |
+          bun build --compile \
+            --target=${{ matrix.target }} \
+            --define 'PORTFORWARD_VERSION="${{ github.ref_name }}"' \
+            --define 'PORTFORWARD_REPO="${{ github.repository }}"' \
+            src/cli.ts --outfile ${{ matrix.asset }}
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset }}

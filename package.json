@@ -1,0 +1,18 @@
+{
+  "name": "port-forward",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "portforward": "./src/cli.ts"
+  },
+  "scripts": {
+    "build": "bun build --compile src/cli.ts --outfile dist/portforward",
+    "start": "bun src/cli.ts start",
+    "init": "bun src/cli.ts init",
+    "check": "bun src/cli.ts check"
+  },
+  "devDependencies": {
+    "@types/bun": "^1"
+  }
+}

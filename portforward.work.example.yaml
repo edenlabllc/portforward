@@ -1,0 +1,36 @@
+name: work
+
+services:
+  postgres-cluster-pooler:
+    namespace: postgres
+    localPort: 5432
+    remotePort: 5432
+  clickhouse-http:
+    namespace: clickhouse
+    pod: chi-clickhouse-cluster-0-0-0
+    localPort: 8123
+    remotePort: 8123
+  clickhouse-native:
+    namespace: clickhouse
+    pod: chi-clickhouse-cluster-0-0-0
+    localPort: 9100
+    remotePort: 9000
+  minio:
+    namespace: minio
+    pod: minio-0
+    localPort: 9002
+    remotePort: 9000
+  kubeai:
+    namespace: kubeai
+    localPort: 8000
+    remotePort: 8000
+  weaviate-http:
+    namespace: weaviate
+    pod: weaviate
+    localPort: 8080
+    remotePort: 8080
+  weaviate-grpc:
+    namespace: weaviate
+    pod: weaviate
+    localPort: 50051
+    remotePort: 50051
